@@ -13,10 +13,58 @@ namespace ModelRiskDemo2.Controllers
             _logger = logger;
         }
 
+        [HttpGet("all")]
+        public BasePoints GetAll()
+        {
+            return new BasePoints();
+        }
+        
         [HttpGet("normal")]
         public BasePoints GetNormal(double mu, double sigma)
         {
-            return new BasePoints();
+            var lstU = new List<double>();
+            var s = 0.0;
+            while (s < 1)
+            {
+                lstU.Add(s += 0.001);
+            }
+
+            var lstXU = lstU.Select(u =>
+            {
+                double maximumU;
+                ImportLibrary.VoseNormal_Core(out maximumU, mu, sigma, ref u);
+                return (u, maximumU);
+            });
+
+            var lstDist = lstXU.Select(xU =>
+            {
+                double y;
+                ImportLibrary.VoseNormalProb_Core(out y, new [] {xU.maximumU}, 1, mu, sigma);
+                return (xU.maximumU, y);
+            });
+
+            var lstComul = lstXU.Select(xU =>
+            {
+                double y;
+                ImportLibrary.VoseNormalProb_Core(out y, new[] {xU.maximumU}, 1, mu, sigma, new[] {1});
+                return (xU.maximumU, y);
+            });
+
+            return new BasePoints()
+            {
+                CollectionCumulation = lstComul.Select(
+                    x => new Point()
+                    {
+                        X = x.maximumU,
+                        Y = x.y
+                    }).ToList(),
+                CollectionDensity = lstDist.Select(
+                    x => new Point()
+                    {
+                        X = x.maximumU,
+                        Y = x.y
+                    }).ToList()
+            };
         }
         
         
